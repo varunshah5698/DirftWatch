@@ -1,26 +1,224 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Design tokens — dark is the default theme, light is opt-in via [data-theme="light"].
+  Palette adapted from the reference visual language: near-black canvas, charcoal cards,
+  lime for healthy/primary, orange for warning/product, white neutral, red reserved for critical.
+*/
+:root,
+[data-theme="dark"] {
+  --bg: #060706;
+  --bg-elev: #101211;
+  --surface: #1a1c1b;
+  --surface-2: #222524;
+  --surface-3: #2b2f2d;
+  --line: #303431;
+  --line-soft: #262927;
+  --fg: #f4f6f2;
+  --fg-muted: #a5aba2;
+  --fg-dim: #747a72;
+  --lime: #c6f56b;
+  --lime-ink: #10140a;
+  --lime-soft: rgba(198, 245, 107, 0.14);
+  --orange: #f5a14a;
+  --orange-soft: rgba(245, 161, 74, 0.14);
+  --red: #ff5a4e;
+  --red-soft: rgba(255, 90, 78, 0.14);
+  --amber: #f5d24a;
+  --blue: #7db6ff;
+  --violet: #b39dff;
+  --shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.9);
+  --grid-dot: rgba(244, 246, 242, 0.12);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f2f3ee;
+  --bg-elev: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4f5f0;
+  --surface-3: #e8eae2;
+  --line: #d9dcd1;
+  --line-soft: #e6e8e0;
+  --fg: #14170f;
+  --fg-muted: #545a4e;
+  --fg-dim: #6b7165;
+  --lime: #6c9a12;
+  --lime-ink: #ffffff;
+  --lime-soft: rgba(108, 154, 18, 0.12);
+  --orange: #b8651a;
+  --orange-soft: rgba(184, 101, 26, 0.12);
+  --red: #c02a1f;
+  --red-soft: rgba(192, 42, 31, 0.1);
+  --amber: #9a6f00;
+  --blue: #1f5fb0;
+  --violet: #5b45c4;
+  --shadow: 0 18px 40px -28px rgba(20, 23, 15, 0.35);
+  --grid-dot: rgba(20, 23, 15, 0.14);
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-dim: var(--fg-dim);
+  --color-lime: var(--lime);
+  --color-lime-soft: var(--lime-soft);
+  --color-orange: var(--orange);
+  --color-orange-soft: var(--orange-soft);
+  --color-red: var(--red);
+  --color-red-soft: var(--red-soft);
+  --color-amber: var(--amber);
+  --color-blue: var(--blue);
+  --color-violet: var(--violet);
+  --font-display: var(--font-display), "Bebas Neue", Impact, sans-serif;
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
+  --radius-card: 20px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--lime);
+  color: var(--lime-ink);
+}
+
+/* Focus ring: visible, meets WCAG 2.4.7 */
+:where(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 100;
+}
+.skip-link:focus {
+  left: 16px;
+  padding: 10px 16px;
+  background: var(--lime);
+  color: var(--lime-ink);
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow);
+  }
+  .card-flat {
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+  }
+  .display {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    font-weight: 400;
+    line-height: 0.95;
+  }
+  .label-caps {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.8rem;
+    color: var(--fg-muted);
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    padding: 0.5rem 0.95rem;
+    font-size: 0.8rem;
+    color: var(--fg-muted);
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .pill:hover {
+    background: var(--surface-3);
+    color: var(--fg);
+  }
+  .pill[aria-current="page"],
+  .pill[data-active="true"] {
+    background: var(--surface-3);
+    color: var(--fg);
+    border-color: var(--line);
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  .hairline {
+    height: 1px;
+    background: var(--line-soft);
+  }
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.anim-in {
+  animation: fade-up 320ms ease both;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(198, 245, 107, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(198, 245, 107, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(198, 245, 107, 0);
+  }
+}
+.live-dot {
+  animation: pulse-ring 2.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
