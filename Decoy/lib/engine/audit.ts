@@ -45,8 +45,8 @@ export function verifyAuditChain(entries: AuditEntry[]): {
 } {
   let prevHash = "genesis";
   for (const entry of entries) {
-    const { hash: _hash, ...rest } = entry;
-    if (entry.prevHash !== prevHash || hashAuditEntry(rest) !== entry.hash) {
+    const { hash, ...rest } = entry;
+    if (entry.prevHash !== prevHash || hashAuditEntry(rest) !== hash) {
       return { valid: false, checked: entries.indexOf(entry), brokenAt: entry.seq };
     }
     prevHash = entry.hash;

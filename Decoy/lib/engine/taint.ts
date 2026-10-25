@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentEvent as Event, RoleManifest, TaintNode, TaintPath } from "@/lib/types";
+import type { AgentEvent, RoleManifest, TaintNode, TaintPath } from "@/lib/types";
 import { isRestricted } from "@/lib/domain";
 
 const CAUSAL_WINDOW = 12;

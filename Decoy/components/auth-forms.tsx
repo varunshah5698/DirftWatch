@@ -30,7 +30,7 @@ function GoogleButton({ mode }: { mode: "signin" | "signup" }) {
     setPending(true);
     setError(null);
     const origin = window.location.origin;
-    const { url, error } = await startGoogleSignIn(`${origin}/api/auth/oauth/callback`);
+    const { url, error } = await startGoogleSignIn(`${origin}/oauth/callback`);
     setPending(false);
     if (error) {
       setError(error);
@@ -121,17 +121,17 @@ export function SignInForm() {
   const [password, setPassword] = useState("driftwatch-demo");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [demoPending, setDemoPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const signInAs = async (nextEmail: string, nextPassword: string) => {
     setLoading(true);
     setError(null);
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: nextEmail, password: nextPassword }),
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -144,14 +144,26 @@ export function SignInForm() {
       setError("Network error. Try again.");
     } finally {
       setLoading(false);
+      setDemoPending(null);
     }
+  };
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await signInAs(email, password);
+  };
+
+  /** One-click demo sign-in: no fields to fill, straight into the console. */
+  const demoSignIn = async (account: (typeof DEMO_ACCOUNTS)[number]) => {
+    if (loading) return;
+    setDemoPending(account.email);
+    setEmail(account.email);
+    setPassword("driftwatch-demo");
+    await signInAs(account.email, "driftwatch-demo");
   };
 
   return (
     <form onSubmit={submit} aria-describedby="signin-error">
-      <GoogleButton mode="signin" />
-      <Divider />
-
       <div className="space-y-4">
         <Field id="email" label="Work email" icon={<Mail size={15} />}>
           <input
@@ -201,37 +213,46 @@ export function SignInForm() {
         {loading ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <ArrowRight size={15} aria-hidden />}
       </button>
 
-      <p className="mt-4 text-center text-[11.5px] text-[var(--muted)]">
-        New here?{" "}
-        <Link href="/signup" className="focus-ring font-semibold text-[var(--lime)] hover:underline">
-          Create an account
-        </Link>
-      </p>
-
+      {/* ------------------------------------------------ one-click demo */}
       <div className="mt-5 rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] p-3">
-        <p className="eyebrow mb-2">Demo identities</p>
+        <p className="eyebrow mb-2">Demo sign-in · one click</p>
         <div className="grid gap-1.5 sm:grid-cols-2">
           {DEMO_ACCOUNTS.map((account) => (
             <button
               key={account.email}
               type="button"
-              onClick={() => {
-                setEmail(account.email);
-                setPassword("driftwatch-demo");
-                setError(null);
-              }}
-              className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition-colors hover:border-[var(--line-strong)]"
+              onClick={() => demoSignIn(account)}
+              disabled={loading}
+              className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-left transition-colors hover:border-[var(--line-strong)] disabled:opacity-60"
             >
-              <span className="block text-[11px] font-medium">{account.label}</span>
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium">{account.label}</span>
+                {demoPending === account.email && loading ? (
+                  <Loader2 size={12} className="animate-spin text-[var(--lime)]" aria-hidden />
+                ) : (
+                  <ArrowRight size={12} className="text-[var(--muted-dim)]" aria-hidden />
+                )}
+              </span>
               <span className="block text-[9.5px] text-[var(--muted-dim)]">{account.note}</span>
             </button>
           ))}
         </div>
         <p className="mt-2 text-[10px] leading-relaxed text-[var(--muted-dim)]">
-          Every demo account uses <code className="text-[var(--text-soft)]">driftwatch-demo</code>.
-          Sessions are signed, HttpOnly and expire in 8 hours.
+          Signs you in immediately as that identity — no typing. Every demo account uses{" "}
+          <code className="text-[var(--text-soft)]">driftwatch-demo</code>. Sessions are signed,
+          HttpOnly and expire in 8 hours.
         </p>
       </div>
+
+      <Divider />
+      <GoogleButton mode="signin" />
+
+      <p className="mt-5 text-center text-[11.5px] text-[var(--muted)]">
+        New here?{" "}
+        <Link href="/signup" className="focus-ring font-semibold text-[var(--lime)] hover:underline">
+          Create an account
+        </Link>
+      </p>
     </form>
   );
 }

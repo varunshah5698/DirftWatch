@@ -61,9 +61,6 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
   const baseline = store.baselines[agent.id];
   const events = agentEvents(agent.id, 7 * 86_400_000);
   const alerts = agentAlerts(agent.id);
-  const activeAlerts = alerts.filter((alert) =>
-    ["open", "acknowledged", "escalated"].includes(alert.status),
-  );
   const topAlert = [...alerts].sort((a, b) => b.score - a.score)[0];
   const evaluation = scoreWindow({ manifest: agent.manifest, baseline, events });
   const factors = topAlert?.score && topAlert.score > evaluation.result.score ? topAlert.factors : evaluation.result.factors;

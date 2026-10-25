@@ -72,7 +72,7 @@ export default async function EvidencePage({
             </Link>
           </div>
 
-          <div className="mb-3 grid gap-3 xl:grid-cols-12">
+          <div className="mb-3 grid items-start gap-3 xl:grid-cols-12">
             <Card className="xl:col-span-8">
               <CardHead
                 eyebrow="Taint thread"
@@ -149,7 +149,7 @@ export default async function EvidencePage({
             </Card>
           </div>
 
-          <div className="grid gap-3 xl:grid-cols-12">
+          <div className="grid items-start gap-3 xl:grid-cols-12">
             <Card className="xl:col-span-7">
               <CardHead
                 eyebrow="Causal steps"

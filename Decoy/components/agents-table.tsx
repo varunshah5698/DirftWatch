@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Download, ExternalLink, Search, X } from "lucide-react";
 import type { Agent } from "@/lib/types";
 import { Sparkline } from "@/components/charts";
-import { OwnerAvatar, SeverityBadge, StatusPill } from "@/components/ui";
+import { OwnerAvatar, StatusPill } from "@/components/ui";
 import { relativeTime } from "@/lib/format";
 
 export interface AgentRow {

@@ -40,10 +40,20 @@ function CallbackInner() {
       }
 
       const code = params.get("code");
+      const oauthError = params.get("error");
+      const oauthErrorCode = params.get("error_code");
       const errorDescription = params.get("error_description");
       if (!code) {
         setPhase("failed");
-        setMessage(errorDescription ?? "No authorization code was returned by Google.");
+        // Supabase reports OAuth failures via any of these params — a bare
+        // `error` (e.g. access_denied) with no description is common when the
+        // consent step is cancelled or blocked upstream.
+        setMessage(
+          errorDescription ||
+            (oauthError || oauthErrorCode
+              ? `Google sign-in was rejected upstream${oauthError ? `: ${oauthError}` : ""}${oauthErrorCode ? ` (${oauthErrorCode})` : ""}.`
+              : "No authorization code was returned by Google. If you waited a long time on a Google screen before finishing, the sign-in request expired — start again from the sign-in page and complete it in one go."),
+        );
         return;
       }
 
@@ -100,6 +110,13 @@ function CallbackInner() {
           <div>
             <p className="text-[13px] font-semibold">Could not complete Google sign-in</p>
             <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--text-soft)]">{message}</p>
+            {/* Raw arrival diagnostics — the OAuth chain has several hops and
+                this makes any future failure pinpointable from the screen. */}
+            <pre className="mt-3 overflow-x-auto rounded-lg bg-[var(--panel)] p-2.5 text-[10px] leading-relaxed text-[var(--muted)]">
+{`path: ${window.location.pathname}
+query: ${window.location.search || "(empty)"}
+hash: ${window.location.hash || "(empty)"}`}
+            </pre>
           </div>
         </div>
       </div>

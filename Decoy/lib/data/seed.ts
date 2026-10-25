@@ -31,7 +31,6 @@ import {
   generateTodaySession,
   makeAgent,
   mulberry32,
-  pick,
   randomInt,
 } from "./generate";
 

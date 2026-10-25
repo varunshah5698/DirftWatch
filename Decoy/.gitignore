@@ -11,3 +11,6 @@ coverage/
 playwright-report/
 test-results/
 .sbom/
+/freebuff-sites-build/
+/.open-next/
+/.wrangler/

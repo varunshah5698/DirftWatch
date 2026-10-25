@@ -49,12 +49,6 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
 
   const selected = store.alerts.find((alert) => alert.id === params.alert) ?? filtered[0] ?? store.alerts[0];
   const agent = selected ? store.agents.find((candidate) => candidate.id === selected.agentId) : undefined;
-  const incident = selected
-    ? store.incidents.find(
-        (candidate) =>
-          candidate.id === selected.incidentId || candidate.alertIds.includes(selected.id),
-      )
-    : undefined;
   const canTriage = Boolean(user && can(user.role, "alert:triage"));
   const counts = {
     open: store.alerts.filter((alert) => ["open", "acknowledged", "escalated"].includes(alert.status)).length,

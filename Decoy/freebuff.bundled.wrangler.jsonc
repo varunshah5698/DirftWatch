@@ -1,0 +1,7 @@
+{
+  "name": "driftwatch-bundle-test",
+  "main": "freebuff-sites-build/bundle/entry.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": "freebuff-sites-build/site-assets", "binding": "ASSETS", "run_worker_first": true }
+}

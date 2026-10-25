@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { guard } from "@/lib/auth/api";
 import { emitLiveEvents, getStore } from "@/lib/store";
-import { jsonError, noStore } from "@/lib/http";
+import { noStore } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 

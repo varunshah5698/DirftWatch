@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Download, Loader2, Play, ShieldAlert, ShieldCheck } from "lucide-react";
-import type { Scenario, SimulationResult } from "@/lib/types";
+import type { SimulationResult } from "@/lib/types";
 import type { SimulationSummary } from "@/lib/engine/simulate";
 import { SCENARIOS } from "@/lib/engine/simulate";
 import { relativeTime } from "@/lib/format";

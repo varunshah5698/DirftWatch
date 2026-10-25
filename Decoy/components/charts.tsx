@@ -470,7 +470,7 @@ export function DotMatrix({
   const max = Math.max(1, ...counts);
   const width = cols * (cell + gap);
   const height = rows * (cell + gap);
-  const colorFor = (value: number, index: number) => {
+  const colorFor = (value: number, _index: number) => {
     if (value === 0) return "var(--line)";
     if (hue === "orange") return "var(--orange)";
     if (hue === "mixed") {

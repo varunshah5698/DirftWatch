@@ -133,7 +133,7 @@ export function buildBaseline(
  * Change points over daily action volume. Sudden volume shifts are annotated in
  * the Baselines UI and matched against change-management events.
  */
-export function deriveChangePoints(events: AgentEvent[], end: string): ChangePoint[] {
+export function deriveChangePoints(events: AgentEvent[], _end: string): ChangePoint[] {
   if (events.length === 0) return [];
   const buckets = new Map<string, number>();
   for (const event of events) {

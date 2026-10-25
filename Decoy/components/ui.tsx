@@ -257,7 +257,7 @@ export function KpiCard({
   invertDelta,
 }: {
   label: string;
-  value: string | number;
+  value: ReactNode;
   unit?: string;
   delta?: string;
   direction?: "up" | "down";

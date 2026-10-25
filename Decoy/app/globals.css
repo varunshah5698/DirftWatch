@@ -420,3 +420,31 @@ body {
     --radius: 18px;
   }
 }
+
+/* ------------------------------------------------- marketing extras */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee {
+  animation: marquee 42s linear infinite;
+}
+
+/* Scroll-reveal safety: with scripting off the content must stay visible. */
+@media (scripting: none) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    animation: none;
+  }
+}

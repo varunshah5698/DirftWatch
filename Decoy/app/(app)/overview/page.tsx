@@ -8,7 +8,6 @@ import {
   Waypoints,
 } from "lucide-react";
 import {
-  AlignmentDial,
   CapsuleCompare,
   DotMatrix,
   DriftPulse,
@@ -28,9 +27,18 @@ import {
   StatusPill,
 } from "@/components/ui";
 import { FilterGroup, FilterMenu, SettingsFilter } from "@/components/filters";
+import {
+  LiveClock,
+  LiveDial,
+  LiveFeed,
+  LiveSpark,
+  TickingNumber,
+  TrainingPanel,
+  type FeedEvent,
+} from "@/components/live";
 import { getStore, overview } from "@/lib/store";
 import { CONTAINMENT_LADDER, FACTOR_ORDER, FACTOR_META } from "@/lib/domain";
-import { compact, formatDate, relativeTime } from "@/lib/format";
+import { formatDate, relativeTime } from "@/lib/format";
 
 export const metadata = { title: "Overview" };
 
@@ -74,7 +82,7 @@ export default async function OverviewPage({
         a.alignment - b.alignment ||
         b.containment - a.containment,
     )
-    .slice(0, 5);
+    .slice(0, 8);
   const trend = store.fleetTrend.slice(-range);
   const openIncidents = scopedIncidents.filter((incident) => incident.status === "open");
 
@@ -113,6 +121,43 @@ export default async function OverviewPage({
       0,
     ),
   })).sort((a, b) => b.total - a.total);
+
+  // Seed rows for the streaming activity feed: recent real events rendered in
+  // the feed's own shape, aged from "now" so the list reads as live on arrival.
+  const feedAgents = scopedAgents.slice(0, 8).map((agent) => agent.name);
+  const toFeedEvent = (event: (typeof recentEvents)[number], index: number): FeedEvent => {
+    const agent = scopedAgents.find((candidate) => candidate.id === event.agentId);
+    return {
+      id: `seed-${event.id}`,
+      agent: agent?.name ?? "Unknown agent",
+      action: event.type,
+      detail:
+        event.tool ??
+        event.destination ??
+        event.dataClass ??
+        event.summary.slice(0, 48),
+      result:
+        event.canary || (event.risk ?? 0) >= 70
+          ? "blocked"
+          : event.trust === "untrusted" || event.label === "attack" || (event.risk ?? 0) >= 40
+            ? "restricted"
+            : "allowed",
+      ts: Date.now() - index * 21_000,
+    };
+  };
+  const feedSeed: FeedEvent[] = recentEvents.slice(0, 7).map(toFeedEvent);
+  // The posture card filters to denied/limited outcomes only, so seed it from
+  // the risky slice of the log — otherwise the card opens nearly empty.
+  const riskyEvents = recentEvents.filter(
+    (event) =>
+      event.canary === true ||
+      event.trust === "untrusted" ||
+      event.label === "attack" ||
+      (event.risk ?? 0) >= 40,
+  );
+  const postureSeed: FeedEvent[] = (riskyEvents.length ? riskyEvents : recentEvents)
+    .slice(0, 5)
+    .map(toFeedEvent);
 
   const destinations = (() => {
     const map = new Map<string, { bytes: number; allowed: boolean; hits: number }>();
@@ -160,8 +205,23 @@ export default async function OverviewPage({
     { label: "Last 7 days", value: "7", href: makeHref({ range: "7" }) },
   ];
 
-  const sparkAlignment = trend.map((point) => point.alignment);
-  const sparkAlerts = trend.map((point) => point.alerts);
+  const severitySegments = [
+    {
+      label: "Critical / high",
+      color: "var(--red)",
+      count: scopedAlerts.filter((alert) => ["critical", "high"].includes(alert.severity)).length,
+    },
+    {
+      label: "Medium",
+      color: "var(--orange)",
+      count: scopedAlerts.filter((alert) => alert.severity === "medium").length,
+    },
+    {
+      label: "Low / info",
+      color: "var(--line-strong)",
+      count: scopedAlerts.filter((alert) => ["low", "info"].includes(alert.severity)).length,
+    },
+  ].filter((segment) => segment.count > 0);
 
   return (
     <div className="pb-4">
@@ -175,13 +235,23 @@ export default async function OverviewPage({
               <span className="live-dot" /> Telemetry healthy
             </span>
             <span className="chip">
-              <Waypoints size={11} aria-hidden /> {compact(summary.eventsIngested24h)} events / 24h
+              <Waypoints size={11} aria-hidden />
+              <TickingNumber
+                base={summary.eventsIngested24h}
+                accumulate
+                period={2600}
+                compact
+              />{" "}
+              events / 24h
             </span>
             <span className="chip">
               <TimerReset size={11} aria-hidden /> p50 detection {summary.detectionP50Seconds}s
             </span>
             <span className="chip">
               <ShieldAlert size={11} aria-hidden /> {summary.coveragePercent}% manifest coverage
+            </span>
+            <span className="chip">
+              <LiveClock />
             </span>
           </>
         }
@@ -206,46 +276,91 @@ export default async function OverviewPage({
       <div className="stagger mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           label="Active agents"
-          value={scopedAgents.filter((agent) => ["active", "learning", "degraded"].includes(agent.status)).length}
+          value={
+            <TickingNumber
+              base={scopedAgents.filter((agent) => ["active", "learning", "degraded"].includes(agent.status)).length}
+              min={0}
+            />
+          }
           delta="+4"
           hint="vs last week"
-          spark={<Sparkline values={Array.from({ length: 12 }, (_, index) => 48 + index * 1.2)} color="var(--lime)" height={50} id="kpi-active" />}
+          spark={<LiveSpark values={Array.from({ length: 12 }, (_, index) => 48 + index * 1.2)} color="var(--lime)" height={50} id="kpi-active" />}
         />
         <KpiCard
           label="Agents at risk"
-          value={scopedAgents.filter((agent) => agent.alignment < 70 || agent.openAlerts > 0).length}
+          value={
+            <TickingNumber
+              base={scopedAgents.filter((agent) => agent.alignment < 70 || agent.openAlerts > 0).length}
+              min={0}
+            />
+          }
           delta="+2"
           direction="up"
           hint="needs review"
           invertDelta
-          spark={<Sparkline values={[2, 3, 2, 4, 3, 5, 4, 6, 5, 7, 6, 7]} color="var(--orange)" height={50} id="kpi-risk" />}
+          spark={<LiveSpark values={[2, 3, 2, 4, 3, 5, 4, 6, 5, 7, 6, 7]} color="var(--orange)" height={50} id="kpi-risk" />}
         />
         <KpiCard
           label="Open incidents"
-          value={openIncidents.length}
+          value={<TickingNumber base={openIncidents.length} jitter={1} min={0} />}
           delta="-1"
           direction="down"
           hint="vs yesterday"
           invertDelta
-          spark={<Sparkline values={[5, 4, 6, 4, 5, 3, 4, 3, 4, 3, 3, 2]} color="var(--orange)" height={50} id="kpi-incidents" />}
+          spark={<LiveSpark values={[5, 4, 6, 4, 5, 3, 4, 3, 4, 3, 3, 2]} color="var(--orange)" height={50} id="kpi-incidents" />}
         />
         <KpiCard
           label="Mean time to contain"
-          value={summary.mttfMinutes}
+          value={<TickingNumber base={summary.mttfMinutes} jitter={2} min={0} />}
           unit="min"
           delta="-8m"
           direction="down"
           hint="target < 45m"
-          spark={<Sparkline values={[52, 48, 44, 46, 39, 41, 34, 36, 29, 31, 27, 26]} color="var(--lime)" height={50} id="kpi-mttf" />}
+          spark={<LiveSpark values={[52, 48, 44, 46, 39, 41, 34, 36, 29, 31, 27, 26]} color="var(--lime)" height={50} id="kpi-mttf" />}
         />
         <KpiCard
           label="False positive rate"
-          value={`${summary.falsePositiveRate.toFixed(1)}%`}
+          value={
+            <TickingNumber
+              base={summary.falsePositiveRate}
+              jitter={0.3}
+              min={0}
+              decimals={1}
+              suffix="%"
+            />
+          }
           delta="-1.2pp"
           direction="down"
           hint={`${summary.feedbackLabels} labels`}
-          spark={<Sparkline values={[7.2, 6.4, 6.8, 5.6, 5.9, 4.8, 5.1, 4.4, 4.1, 4.6, 4.0, 3.7]} color="var(--lime)" height={50} id="kpi-fpr" />}
+          spark={<LiveSpark values={[7.2, 6.4, 6.8, 5.6, 5.9, 4.8, 5.1, 4.4, 4.1, 4.6, 4.0, 3.7]} color="var(--lime)" height={50} id="kpi-fpr" />}
         />
+      </div>
+
+      {/* ------------------------------------------- live ops: activity + training */}
+      <div className="mb-4 grid gap-3 xl:grid-cols-12">
+        <Card className="flex flex-col xl:col-span-8">
+          <CardHead
+            eyebrow="Streaming now"
+            title="Live activity"
+            subtitle="Tool calls, data reads and egress decisions from the scoped fleet as they land."
+            right={
+              <span className="chip chip-lime">
+                <span className="live-dot" /> Live
+              </span>
+            }
+          />
+          <div className="flex-1 px-6 pb-5">
+            <LiveFeed seed={feedSeed} agents={feedAgents} max={7} />
+          </div>
+        </Card>
+        <Card className="flex flex-col xl:col-span-4">
+          <CardHead
+            eyebrow="Learning system"
+            title="Model training"
+            subtitle="The baseline loop that scores every event window."
+          />
+          <TrainingPanel />
+        </Card>
       </div>
 
       <div className="mb-4 grid gap-3 xl:grid-cols-12">
@@ -257,7 +372,7 @@ export default async function OverviewPage({
             right={<SectionLink href="/agents">Directory <ArrowRight size={12} /></SectionLink>}
           />
           <div className="flex flex-col items-center gap-4 px-6 pb-5 sm:flex-row sm:items-center sm:justify-between xl:flex-col">
-            <AlignmentDial score={scopedAlignment} size={196} confidence={0.86} />
+            <LiveDial score={scopedAlignment} size={196} confidence={0.86} />
             <div className="w-full space-y-3">
               <div className="flex items-center justify-between text-[11.5px]">
                 <span className="inline-flex items-center gap-2 text-[var(--muted)]">
@@ -309,7 +424,7 @@ export default async function OverviewPage({
                 title: change.title,
                 type: change.type,
               }))}
-              height={252}
+              height={348}
             />
           </div>
           <div className="grid grid-cols-3 divide-x divide-[var(--line)] border-t border-[var(--line)]">
@@ -340,7 +455,8 @@ export default async function OverviewPage({
             {atRisk.length === 0 ? (
               <EmptyState title="No agents at risk" description="All scoped agents are inside their declared roles." />
             ) : (
-              <ul className="divide-y divide-[var(--line)]">
+              <>
+                <ul className="divide-y divide-[var(--line)]">
                 {atRisk.map((agent) => (
                   <li key={agent.id}>
                     <Link
@@ -370,7 +486,16 @@ export default async function OverviewPage({
                     </Link>
                   </li>
                 ))}
-              </ul>
+                </ul>
+                <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3 text-[10.5px] text-[var(--muted)]">
+                  <span>
+                    {atRisk.length} of {scopedAgents.length} scoped agents flagged
+                  </span>
+                  <span className="metric-sm text-[12px] font-semibold text-[var(--text-soft)]">
+                    <TickingNumber base={scopedAlignment} jitter={2} min={0} max={100} />% fleet mean
+                  </span>
+                </div>
+              </>
             )}
           </div>
         </Card>
@@ -391,7 +516,7 @@ export default async function OverviewPage({
               items={capsuleItems}
               primaryLabel="Tool calls"
               secondaryLabel="Data reads"
-              height={160}
+              height={120}
             />
           </div>
         </Card>
@@ -424,6 +549,17 @@ export default async function OverviewPage({
                 Inspect gateway dry-run <ArrowRight size={11} aria-hidden />
               </Link>
             </div>
+            <div className="mt-4">
+              <p className="eyebrow mb-1.5">Denied or limited · live</p>
+              <LiveFeed
+                seed={postureSeed}
+                agents={feedAgents}
+                max={5}
+                dense
+                slim
+                onlyResults={["restricted", "blocked"]}
+              />
+            </div>
           </div>
         </Card>
       </div>
@@ -439,12 +575,13 @@ export default async function OverviewPage({
             {scopedAlerts.length === 0 ? (
               <EmptyState title="Queue clear" description="No open alerts for the selected scope." />
             ) : (
-              <ul className="divide-y divide-[var(--line)]">
-                {scopedAlerts.slice(0, 5).map((alert) => (
+              <>
+                <ul className="divide-y divide-[var(--line)]">
+                  {scopedAlerts.slice(0, 7).map((alert) => (
                   <li key={alert.id}>
                     <Link
                       href={`/alerts?alert=${alert.id}`}
-                      className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--panel-hi)]"
+                      className="flex items-center gap-3 rounded-xl px-3 py-4 transition-colors hover:bg-[var(--panel-hi)]"
                     >
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-[12px] font-bold" style={{
                         borderColor: alert.severity === "critical" ? "var(--red)" : "var(--orange)",
@@ -466,7 +603,53 @@ export default async function OverviewPage({
                     </Link>
                   </li>
                 ))}
-              </ul>
+                </ul>
+                <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel-soft)] px-4 py-3">
+                  <div className="flex items-baseline justify-between text-[9px] uppercase tracking-[0.1em] text-[var(--muted-dim)]">
+                    <span>Severity split</span>
+                    <span>{scopedAlerts.length} open</span>
+                  </div>
+                  <div className="mt-2 flex h-2 gap-1 overflow-hidden rounded-full">
+                    {severitySegments.map((segment) => (
+                      <span
+                        key={segment.label}
+                        className="block h-full rounded-full transition-[width] duration-500"
+                        style={{
+                          width: `${(segment.count / Math.max(1, scopedAlerts.length)) * 100}%`,
+                          background: segment.color,
+                        }}
+                        title={`${segment.label}: ${segment.count}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[var(--muted)]">
+                    {severitySegments.map((segment) => (
+                      <span key={segment.label} className="inline-flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: segment.color }} />
+                        {segment.label} {segment.count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-3 divide-x divide-[var(--line)] border-t border-[var(--line)] pt-3">
+                  {[
+                    // Exact counts render static so they can never contradict
+                    // the rows above; only the aggregate score drifts live.
+                    { label: "Critical", value: scopedAlerts.filter((alert) => alert.severity === "critical").length, live: false },
+                    { label: "Median score", value: Math.round(scopedAlerts.reduce((total, alert) => total + alert.score, 0) / Math.max(1, scopedAlerts.length)), live: true },
+                    { label: "Taint-linked", value: scopedAlerts.filter((alert) => alert.evidence.taint).length, live: false },
+                  ].map((stat) => (
+                    <div key={stat.label} className="px-3 first:pl-0 last:pr-0">
+                      <p className="metric-sm text-[17px] font-semibold leading-none">
+                        <TickingNumber base={stat.value} jitter={stat.live ? 3 : 0} min={0} />
+                      </p>
+                      <p className="mt-1 text-[9px] uppercase tracking-[0.1em] text-[var(--muted-dim)]">
+                        {stat.label}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </Card>

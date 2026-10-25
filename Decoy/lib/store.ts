@@ -468,7 +468,7 @@ export function securityGraph(limitTools = 16): { nodes: GraphNode[]; links: Gra
   }));
 
   const links: GraphLink[] = [...linkCounts.values()];
-  for (const [tool, count] of topTools) {
+  for (const [tool] of topTools) {
     nodes.push({
       id: `tool:${tool}`,
       name: tool,

@@ -4,9 +4,9 @@
  * Supabase browser client.
  *
  * Google sign-in runs entirely through Supabase Auth: the browser redirects to
- * Supabase, Supabase talks to Google, and our /api/auth/oauth/callback route
- * exchanges the returned code for a Driftwatch session cookie. No Google
- * client secret ever touches this codebase.
+ * Supabase, Supabase talks to Google, and the /oauth/callback page exchanges
+ * the returned code for a Driftwatch session cookie via /api/auth/oauth/session.
+ * No Google client secret ever touches this codebase.
  *
  * The demo console still works without Supabase configured — the email and
  * password flow is local — so every Supabase call here is guarded and the UI
@@ -29,7 +29,10 @@ export function getSupabase(): SupabaseClient | null {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        // The /oauth/callback page runs the PKCE exchange itself; letting the
+        // client auto-detect the code here too would race it and burn the
+        // one-time code.
+        detectSessionInUrl: false,
       },
     });
   }
@@ -59,7 +62,16 @@ export async function startGoogleSignIn(
   });
 
   if (error || !data.url) {
-    return { error: error?.message || "Google sign-in failed to start." };
+    const raw = error?.message ?? "";
+    // Supabase answers with a raw JSON blob when the provider is off:
+    // {"code":400,"error_code":"validation_failed","msg":"Unsupported provider..."}
+    if (/provider is not enabled|Unsupported provider/i.test(raw)) {
+      return {
+        error:
+          "Google sign-in isn't enabled on this Supabase project yet. In Supabase → Authentication → Providers → Google, add your Google OAuth client ID and secret.",
+      };
+    }
+    return { error: raw || "Google sign-in failed to start." };
   }
   return { url: data.url };
 }
